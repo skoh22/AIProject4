@@ -315,6 +315,8 @@ class ParticleFilter(InferenceModule):
             else: #weighted sample w/ replacement
                 for i in range(len(self.particles)):
                     self.particles[i] = self.particles[i]*weights[i]
+    #questions: what is stored in particles-- is it position?
+    # also how do you do a weighted sample with replacement from the population
 
     def elapseTime(self, gameState):
         """
