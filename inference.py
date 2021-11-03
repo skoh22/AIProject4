@@ -262,7 +262,11 @@ class ParticleFilter(InferenceModule):
         Storing your particles as a Counter (where there could be an associated
         weight with each position) is incorrect and may produce errors.
         """
-        "*** YOUR CODE HERE ***"
+        self.particles = []
+        for p in range(self.numParticles):
+            posIndex = p % len(self.legalPositions)
+            pos = self.legalPositions[posIndex]
+            self.particles.append(pos)
 
     def observe(self, observation, gameState):
         """
@@ -294,8 +298,23 @@ class ParticleFilter(InferenceModule):
         noisyDistance = observation
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        weights = []
+        if noisyDistance is None:
+            for i in range(len(self.particles)):
+                self.particles[i] = self.getJailPosition()
+        else:
+            isWeightZero = True
+            for i in range(len(self.particles)):
+                p = self.particles[i]
+                dist = util.manhattanDistance(p,pacmanPosition)
+                weights[i] = emissionModel[dist]
+                if weights[i] is not 0:
+                    isWeightZero = False
+            if isWeightZero:
+                self.initializeUniformly()
+            else: #weighted sample w/ replacement
+                for i in range(len(self.particles)):
+                    self.particles[i] = self.particles[i]*weights[i]
 
     def elapseTime(self, gameState):
         """
@@ -321,8 +340,12 @@ class ParticleFilter(InferenceModule):
         essentially converts a list of particles into a belief distribution (a
         Counter object)
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        updatedBeliefs = util.Counter()
+        for i in range(len(self.legalPositions)):
+            p = self.legalPositions[i]
+            updatedBeliefs[p] = self.particles[i]
+
+        self.beliefs = updatedBeliefs
 
 class MarginalInference(InferenceModule):
     """
