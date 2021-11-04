@@ -397,11 +397,10 @@ class JointParticleFilter:
         legal = self.legalPositions
         self.particles = []
         stateIterator = itertools.product(legal, repeat=self.numGhosts)
-        allStates = [next(stateIterator) for i in range(len(legal) * self.numGhosts)]
+        allStates = [next(stateIterator) for i in range(len(legal) ** self.numGhosts)]
         random.shuffle(allStates)
         for i in range(self.numParticles):
-            self.particles.append(allStates[i%len(allStates)])
-
+            self.particles.append(allStates[i % len(allStates)])
 
 
     def addGhostAgent(self, agent):
@@ -451,18 +450,16 @@ class JointParticleFilter:
 
         # get indices of captured ghosts for (later) update of particles
         captured = [g for g in range(len(noisyDistances)) if noisyDistances[g] is None]
+
         # get belief distribution
         beliefs = self.getBeliefDistribution()
         # weight beliefs by evidence
-        allZero = True
         for b in beliefs:
             for i in range(len(noisyDistances)):
                 beliefs[b] *= emissionModels[i][noisyDistances[i]]
-                if beliefs[b] != 0:
-                    allZero = False
 
         # resample particles
-        if allZero:
+        if beliefs.totalCount() == 0:
             self.initializeParticles()
         else:
             self.particles = [util.sample(beliefs) for i in range(self.numParticles)]
@@ -471,6 +468,7 @@ class JointParticleFilter:
         for g in captured:
             for p in self.particles:
                 self.particles[self.particles.index(p)] = self.getParticleWithGhostInJail(p, g)
+
 
     def getParticleWithGhostInJail(self, particle, ghostIndex):
         """
