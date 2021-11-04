@@ -262,11 +262,13 @@ class ParticleFilter(InferenceModule):
         Storing your particles as a Counter (where there could be an associated
         weight with each position) is incorrect and may produce errors.
         """
+
         self.particles = []
         for p in range(self.numParticles):
             posIndex = p % len(self.legalPositions)
             pos = self.legalPositions[posIndex]
             self.particles.append(pos)
+
 
     def observe(self, observation, gameState):
         """
@@ -298,25 +300,27 @@ class ParticleFilter(InferenceModule):
         noisyDistance = observation
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
-        weights = []
         if noisyDistance is None:
             for i in range(len(self.particles)):
                 self.particles[i] = self.getJailPosition()
         else:
-            isWeightZero = True
+            #isWeightZero = True
+            beliefs = self.getBeliefDistribution()
             for i in range(len(self.particles)):
                 p = self.particles[i]
-                dist = util.manhattanDistance(p,pacmanPosition)
-                weights[i] = emissionModel[dist]
-                if weights[i] is not 0:
-                    isWeightZero = False
-            if isWeightZero:
-                self.initializeUniformly()
+                beliefs[p] = beliefs[p]*emissionModel[observation]
+                #print "beliefs[", i, "]" , beliefs[p]
+                #if beliefs[p] is not 0.0:
+                    #isWeightZero = False
+            beliefs.normalize()
+            if beliefs.totalCount() == 0:
+                #initialize particles uniformly
+                self.initializeUniformly(gameState)
             else: #weighted sample w/ replacement
-                for i in range(len(self.particles)):
-                    self.particles[i] = self.particles[i]*weights[i]
-    #questions: what is stored in particles-- is it position?
-    # also how do you do a weighted sample with replacement from the population
+                for i in range(self.numParticles):
+                    #print beliefs
+                    self.particles[i] = util.sample(beliefs) #problem with resampling
+
 
     def elapseTime(self, gameState):
         """
@@ -333,7 +337,17 @@ class ParticleFilter(InferenceModule):
         a belief distribution.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        newBeliefs = util.Counter()
+        beliefs = self.getBeliefDistribution()
+        for b in beliefs:
+            newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState, b))
+            for newPos, prob in newPosDist.items():
+                newBeliefs[newPos] += prob * beliefs[b]
+        newBeliefs.normalize()
+
+        #update self.particles
+        for i in self.getNumParticles:
+            self.particles[i] = util.sample(self.weights)
 
     def getBeliefDistribution(self):
         """
@@ -343,11 +357,11 @@ class ParticleFilter(InferenceModule):
         Counter object)
         """
         updatedBeliefs = util.Counter()
-        for i in range(len(self.legalPositions)):
-            p = self.legalPositions[i]
-            updatedBeliefs[p] = self.particles[i]
-
-        self.beliefs = updatedBeliefs
+        for i in range(self.numParticles):
+            p = self.particles[i]
+            updatedBeliefs[p] = updatedBeliefs[p] + 1
+        updatedBeliefs.normalize()
+        return updatedBeliefs
 
 class MarginalInference(InferenceModule):
     """
