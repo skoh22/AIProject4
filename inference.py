@@ -455,8 +455,11 @@ class JointParticleFilter:
         beliefs = self.getBeliefDistribution()
         # weight beliefs by evidence
         for b in beliefs:
+            weight = 1
             for i in range(len(noisyDistances)):
-                beliefs[b] *= emissionModels[i][noisyDistances[i]]
+                if noisyDistances[i] != None:  # only count uncaptured ghosts (captured cause problems bc multiply by 0)
+                    weight *= emissionModels[i][util.manhattanDistance(pacmanPosition, b[i])]
+            beliefs[b] *= weight
 
         # resample particles
         if beliefs.totalCount() == 0:
@@ -467,6 +470,7 @@ class JointParticleFilter:
         # update for captured ghosts
         for g in captured:
             for p in self.particles:
+                i = self.particles.index(p)
                 self.particles[self.particles.index(p)] = self.getParticleWithGhostInJail(p, g)
 
 
