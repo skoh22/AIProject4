@@ -262,7 +262,12 @@ class ParticleFilter(InferenceModule):
         Storing your particles as a Counter (where there could be an associated
         weight with each position) is incorrect and may produce errors.
         """
-        "*** YOUR CODE HERE ***"
+
+        self.particles = []
+        for p in range(self.numParticles):
+            posIndex = p % len(self.legalPositions)
+            pos = self.legalPositions[posIndex]
+            self.particles.append(pos)
 
     def observe(self, observation, gameState):
         """
@@ -294,8 +299,30 @@ class ParticleFilter(InferenceModule):
         noisyDistance = observation
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if noisyDistance is None:
+            for i in range(len(self.particles)):
+                self.particles[i] = self.getJailPosition()
+        else:
+            #isWeightZero = True
+            beliefs = self.getBeliefDistribution()
+            for i in range(len(self.legalPositions)):
+                p = self.legalPositions[i]
+                dist = util.manhattanDistance(p, pacmanPosition)
+                beliefs[p] = beliefs[p]*emissionModel[dist]
+                #print "beliefs[", i, "]" , beliefs[p]
+                #if beliefs[p] is not 0.0:
+                    #isWeightZero = False
+            beliefs.normalize()
+            if beliefs.totalCount() == 0: #if 0
+                #print "beliefs: ", beliefs
+                #initialize particles uniformly
+                self.initializeUniformly(gameState)
+            else: #weighted sample w/ replacement
+                for i in range(len(self.particles)):
+                    #print beliefs
+                    self.particles[i] = util.sample(beliefs) #problem with resampling
+                #print "beliefs", beliefs
+
 
     def elapseTime(self, gameState):
         """
@@ -312,7 +339,17 @@ class ParticleFilter(InferenceModule):
         a belief distribution.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        newBeliefs = util.Counter()
+        beliefs = self.getBeliefDistribution()
+        for b in beliefs:
+            newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState, b))
+            for newPos, prob in newPosDist.items():
+                newBeliefs[newPos] += prob * beliefs[b]
+        newBeliefs.normalize()
+
+        #update self.particles
+        for i in range(self.numParticles):
+            self.particles[i] = util.sample(newBeliefs)
 
     def getBeliefDistribution(self):
         """
@@ -321,8 +358,12 @@ class ParticleFilter(InferenceModule):
         essentially converts a list of particles into a belief distribution (a
         Counter object)
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        updatedBeliefs = util.Counter()
+        for i in range(self.numParticles):
+            p = self.particles[i]
+            updatedBeliefs[p] = updatedBeliefs[p] + 1
+        updatedBeliefs.normalize()
+        return updatedBeliefs
 
 class MarginalInference(InferenceModule):
     """
