@@ -269,7 +269,6 @@ class ParticleFilter(InferenceModule):
             pos = self.legalPositions[posIndex]
             self.particles.append(pos)
 
-
     def observe(self, observation, gameState):
         """
         Update beliefs based on the given distance observation. Make sure to
@@ -306,20 +305,23 @@ class ParticleFilter(InferenceModule):
         else:
             #isWeightZero = True
             beliefs = self.getBeliefDistribution()
-            for i in range(len(self.particles)):
-                p = self.particles[i]
-                beliefs[p] = beliefs[p]*emissionModel[observation]
+            for i in range(len(self.legalPositions)):
+                p = self.legalPositions[i]
+                dist = util.manhattanDistance(p, pacmanPosition)
+                beliefs[p] = beliefs[p]*emissionModel[dist]
                 #print "beliefs[", i, "]" , beliefs[p]
                 #if beliefs[p] is not 0.0:
                     #isWeightZero = False
             beliefs.normalize()
-            if beliefs.totalCount() == 0:
+            if beliefs.totalCount() == 0: #if 0
+                #print "beliefs: ", beliefs
                 #initialize particles uniformly
                 self.initializeUniformly(gameState)
             else: #weighted sample w/ replacement
-                for i in range(self.numParticles):
+                for i in range(len(self.particles)):
                     #print beliefs
                     self.particles[i] = util.sample(beliefs) #problem with resampling
+                #print "beliefs", beliefs
 
 
     def elapseTime(self, gameState):
@@ -346,8 +348,8 @@ class ParticleFilter(InferenceModule):
         newBeliefs.normalize()
 
         #update self.particles
-        for i in self.getNumParticles:
-            self.particles[i] = util.sample(self.weights)
+        for i in range(self.numParticles):
+            self.particles[i] = util.sample(newBeliefs)
 
     def getBeliefDistribution(self):
         """
